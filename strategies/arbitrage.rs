@@ -5,10 +5,10 @@ use async_trait::async_trait;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
 
-pub struct LiquidationStrategy {}
+pub struct ArbitrageStrategy {}
 
 #[async_trait]
-impl Strategy for LiquidationStrategy {
+impl Strategy for ArbitrageStrategy {
     fn update(&mut self, _market_conditions: &MarketConditions) {}
 
     async fn find_opportunities(&self, _target_accounts: &HashMap<Pubkey, crate::AccountInfo>) -> Vec<MevOpportunity> {
