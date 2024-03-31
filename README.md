@@ -80,20 +80,36 @@ Code Structure
 Refer to the Project Structure section for the organization of the codebase.
 
 Development Guide
+
 Adding New Strategies
+
 Create a new module in the strategies/ folder to implement the strategy.
+
 Define a new struct that implements the Strategy trait.
+
 Implement the update() and find_opportunities() methods for the new strategy.
+
 Integrate the new strategy into the StrategyManager.
+
 Integrating with New DEXs
+
 Create a new module in the dex/ folder for the integration with the new DEX.
+
 Implement the DexIntegration trait for the new DEX.
+
 Add methods to fetch prices, account balances, place and cancel orders.
+
 Integrate the new DEX into the SolanaMevBot and the StrategyManager.
+
 Improvements and Optimizations
+
 Identify areas of the code that can be optimized in terms of performance, scalability, or security.
+
 Implement advanced optimization techniques, such as parallelism, efficient data structures, etc.
+
 Enhance error handling and implement a robust logging system.
+
 Add more unit and integration tests to ensure the bot's robustness.
+
 License
 This project is distributed under the MIT License.
