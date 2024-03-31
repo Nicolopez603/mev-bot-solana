@@ -1,6 +1,7 @@
 use solana_sdk::transaction::Transaction;
+use std::error::Error;
 
-pub fn analyze_transaction(transaction: &Transaction) -> Result<crate::models::transaction_analysis::TransactionAnalysis, Box<dyn std::error::Error>> {
+pub fn analyze_transaction(transaction: &Transaction) -> Result<crate::models::transaction_analysis::TransactionAnalysis, Box<dyn Error>> {
     let mut analysis = crate::models::transaction_analysis::TransactionAnalysis::default();
     
     analysis.signature = transaction.signatures[0].to_string();
@@ -21,7 +22,7 @@ pub fn analyze_transaction(transaction: &Transaction) -> Result<crate::models::t
     Ok(analysis)
 }
 
-pub fn calculate_profit(transaction: &Transaction) -> Result<f64, Box<dyn std::error::Error>> {
+pub fn calculate_profit(transaction: &Transaction) -> Result<f64, Box<dyn Error>> {
     let mut profit = 0.0;
     
     for (index, instruction) in transaction.message.instructions.iter().enumerate() {

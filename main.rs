@@ -1,14 +1,10 @@
-mod bot;
-mod dex;
-mod strategies;
-mod models;
-mod utils;
+use log::*;
 
-use bot::solana_mev_bot::SolanaMevBot;
-
-#[tokio::main]
-async fn main() {
-    // Configuración inicial y puesta en marcha del bot de MEV de Solana mejorado
+fn main() {
+    env_logger::init();
+    
+    info!("Starting Solana MEV Bot");
+    
     let mut bot = SolanaMevBot::new(
         "https://api.mainnet-beta.solana.com",
         utils::solana::load_keypair("path/to/keypair.json"),

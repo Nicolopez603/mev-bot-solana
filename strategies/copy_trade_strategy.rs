@@ -1,6 +1,7 @@
 use crate::models::copy_trade_target::CopyTradeTarget;
 use crate::models::market_conditions::MarketConditions;
 use crate::strategies::strategy::Strategy;
+use crate::utils::solana::{analyze_transaction, calculate_profit};
 use async_trait::async_trait;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
@@ -64,7 +65,29 @@ impl Strategy for CopyTradeStrategy {
 impl CopyTradeStrategy {
     async fn get_recent_trades(&self, trader_account: &Pubkey) -> Vec<crate::models::trade::Trade> {
         let trades = Vec::new();
-        
         trades
+    }
+    
+    async fn execute_copy_trade(&self, target: &CopyTradeTarget) -> Option<String> {
+        let transaction = self.build_copy_trade_transaction(target);
+        let signature = self.rpc_client.send_transaction(&transaction).await;
+        
+        if let Ok(signature) = signature {
+            let transaction_info = self.rpc_client.get_transaction(&signature).await.unwrap();
+            let profit = calculate_profit(&transaction_info).unwrap();
+            println!("Copy trade transaction executed. Profit: {}", profit);
+            Some(signature.to_string())
+        } else {
+            println!("Failed to execute copy trade transaction");
+            None
+        }
+    }
+    
+    fn build_copy_trade_transaction(&self, target: &CopyTradeTarget) -> solana_sdk::transaction::Transaction {
+        let transaction = solana_sdk::transaction::Transaction::new_with_payer(
+            &[],
+            Some(&self.rpc_client.payer_pubkey()),
+        );
+        transaction
     }
 }
