@@ -1,18 +1,16 @@
-use std::sync::Arc;
-
 use mev_bot_solana::bot::solana_mev_bot::SolanaMevBot;
 use mev_bot_solana::config::Config;
 use mev_bot_solana::dex::dex_manager::DexManager;
-use mev_bot_solana::monitoring::dashboard::Dashboard;
 use mev_bot_solana::monitoring::metrics::Metrics;
 use mev_bot_solana::strategies::copy_trade_strategy::CopyTradeStrategy;
 use mev_bot_solana::strategies::sniping_strategy::SnipingStrategy;
 use mev_bot_solana::utils::config_parser::parse_config;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::signature::read_keypair_file;
+use std::sync::Arc;
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn test_mev_bot_integration() {
     let config = parse_config("config.toml").expect("Failed to parse config");
 
     let rpc_client = Arc::new(RpcClient::new_with_commitment(
@@ -21,7 +19,6 @@ async fn main() {
     ));
 
     let metrics = Arc::new(Metrics::new());
-    let dashboard = Dashboard::new(metrics.clone(), config.monitoring.update_interval);
 
     let dex_manager = Arc::new(tokio::sync::Mutex::new(DexManager::new(
         rpc_client.clone(),
@@ -55,8 +52,17 @@ async fn main() {
     );
 
     tokio::spawn(async move {
-        dashboard.run().await;
+        mev_bot.run().await;
     });
 
-    mev_bot.run().await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
+    let orders = mev_bot.metrics.get_orders().await;
+    assert!(!orders.is_empty());
+
+    let profits = mev_bot.metrics.get_profits().await;
+    assert!(!profits.is_empty());
+
+    let volumes = mev_bot.metrics.get_volumes().await;
+    assert!(!volumes.is_empty());
 }
