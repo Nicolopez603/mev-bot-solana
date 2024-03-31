@@ -1,25 +1,45 @@
-use solana_client::rpc_client::RpcClient;
-use solana_sdk::{
-    commitment_config::CommitmentConfig,
-    pubkey::Pubkey,
-    signature::{Keypair, Signature},
-    signer::Signer,
-    transaction::Transaction,
-};
+use solana_sdk::transaction::Transaction;
 
-pub fn load_keypair(path: &str) -> Keypair {
-    let bytes = std::fs::read(path).expect("Failed to read keypair file");
-    Keypair::from_bytes(&bytes).expect("Failed to deserialize keypair")
+pub fn analyze_transaction(transaction: &Transaction) -> Result<crate::models::transaction_analysis::TransactionAnalysis, Box<dyn std::error::Error>> {
+    let mut analysis = crate::models::transaction_analysis::TransactionAnalysis::default();
+    
+    analysis.signature = transaction.signatures[0].to_string();
+    analysis.num_instructions = transaction.message.instructions.len() as u64;
+    
+    for (index, instruction) in transaction.message.instructions.iter().enumerate() {
+        let account_metas = &instruction.accounts;
+        let num_accounts = account_metas.len() as u64;
+        let program_id = &instruction.program_id;
+        
+        analysis.instructions.push(crate::models::transaction_analysis::InstructionAnalysis {
+            index: index as u64,
+            num_accounts,
+            program_id: program_id.to_string(),
+        });
+    }
+    
+    Ok(analysis)
 }
 
-pub async fn send_transaction(rpc_client: &RpcClient, transaction: &Transaction) -> Result<Signature, Box<dyn std::error::Error>> {
-    let signature = rpc_client
-        .send_and_confirm_transaction_with_spinner_and_commitment(transaction, CommitmentConfig::confirmed())
-        .await?;
-    Ok(signature)
-}
-
-pub async fn get_account_info(rpc_client: &RpcClient, pubkey: &Pubkey) -> Result<solana_client::client_error::ClientResult<solana_account_decoder::UiAccount>, Box<dyn std::error::Error>> {
-    let account = rpc_client.get_account(pubkey).await?;
-    Ok(account)
+pub fn calculate_profit(transaction: &Transaction) -> Result<f64, Box<dyn std::error::Error>> {
+    let mut profit = 0.0;
+    
+    for (index, instruction) in transaction.message.instructions.iter().enumerate() {
+        let account_metas = &instruction.accounts;
+        
+        if let Some(transfer_instruction) = instruction.program_id(&spl_token::ID) {
+            if let Ok(transfer_amount) = spl_token::instruction::unpack_amount(transfer_instruction.data) {
+                let from_account = &account_metas[0];
+                let to_account = &account_metas[1];
+                
+                if from_account.is_signer {
+                    profit -= transfer_amount as f64;
+                } else if to_account.is_signer {
+                    profit += transfer_amount as f64;
+                }
+            }
+        }
+    }
+    
+    Ok(profit)
 }
