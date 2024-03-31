@@ -1,8 +1,7 @@
-use solana_sdk::pubkey::Pubkey;
+use crate::models::market::Market;
 
 pub struct SnipingOpportunity {
-    pub target_account: Pubkey,
-    pub token_mint: Pubkey,
-    pub expected_price: f64,
-    pub token_balance: f64,
-}
+    pub market: Market,
+    pub price: f64,
+    pub liquidity: f64,
+}   

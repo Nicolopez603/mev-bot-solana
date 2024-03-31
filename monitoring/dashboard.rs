@@ -1,34 +1,37 @@
 use crate::monitoring::metrics::Metrics;
-use std::time::Duration;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tokio::time;
 
 pub struct Dashboard {
-    pub metrics: Metrics,
+    pub metrics: Arc<Metrics>,
+    pub update_interval: u64,
 }
 
 impl Dashboard {
-    pub fn new(metrics: Metrics) -> Self {
-        Dashboard { metrics }
-    }
-
-    pub async fn run(&mut self) {
-        loop {
-            self.render_dashboard().await;
-            time::sleep(Duration::from_secs(1)).await;
+    pub fn new(metrics: Arc<Metrics>, update_interval: u64) -> Self {
+        Dashboard {
+            metrics,
+            update_interval,
         }
     }
 
-    async fn render_dashboard(&self) {
-        let metrics = self.metrics.snapshot().await;
+    pub async fn run(&self) {
+        loop {
+            self.render().await;
+            time::sleep(time::Duration::from_secs(self.update_interval)).await;
+        }
+    }
 
-        println!("\n=== Solana MEV Bot Dashboard ===");
-        println!("Timestamp: {}", metrics.timestamp);
-        println!("Processed Blocks: {}", metrics.processed_blocks);
-        println!("Processed Transactions: {}", metrics.processed_transactions);
-        println!("Profitable Transactions: {}", metrics.profitable_transactions);
-        println!("Unprofitable Transactions: {}", metrics.unprofitable_transactions);
-        println!("Total Profit: {} SOL", metrics.total_profit);
-        println!("Total Fees: {} SOL", metrics.total_fees);
-        println!("Average Latency: {} ms", metrics.average_latency);
+    async fn render(&self) {
+        let orders = self.metrics.get_orders().await;
+        let profits = self.metrics.get_profits().await;
+        let volumes = self.metrics.get_volumes().await;
+        
+        println!("=== MEV Bot Dashboard ===");
+        println!("Total Orders: {}", orders.len());
+        println!("Total Profit: {:.2} SOL", profits.values().sum::<f64>());
+        println!("Total Volume: {:.2} SOL", volumes.values().sum::<f64>());
+        println!("==========================");
     }
 }

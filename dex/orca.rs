@@ -1,91 +1,147 @@
-use crate::dex::dex_integration::DexIntegration;
-use async_trait::async_trait;
-use solana_sdk::pubkey::Pubkey;
+use crate::dex::dex_trait::DexTrait;
+use crate::error::Result;
+use crate::models::market::Market;
+use crate::models::order::{Order, OrderSide, OrderStatus, OrderType};
+use sdk::pubkey::Pubkey;
+use sdk::signature::Keypair;
+use sdk::signer::Signer;
+use sdk::transaction::Transaction;
+use solana_client::rpc_client::RpcClient;
 use std::collections::HashMap;
 
 pub struct Orca {
-    pub rpc_client: solana_client::rpc_client::RpcClient,
+    pub rpc_client: RpcClient,
+    pub program_id: Pubkey,
+    pub authority: Keypair,
 }
 
 impl Orca {
-    pub fn new(rpc_client: solana_client::rpc_client::RpcClient) -> Self {
-        Orca { rpc_client }
+    pub fn new(rpc_client: RpcClient, program_id: Pubkey, authority: Keypair) -> Self {
+        Orca {
+            rpc_client,
+            program_id,
+            authority,
+        }
     }
 }
 
 #[async_trait]
-impl DexIntegration for Orca {
-    async fn get_prices(&self) -> HashMap<String, f64> {
-        let pools = self.get_pools().await;
-        let mut prices = HashMap::new();
+impl DexTrait for Orca {
+    async fn get_markets(&self) -> Result<Vec<Market>> {
+        let mut markets = Vec::new();
+        
+        let pools = self.rpc_client.get_program_accounts(&self.program_id)?;
         
         for pool in pools {
-            let pool_data = self.get_pool_data(&pool).await;
-            let token_a = pool_data.token_a.to_string();
-            let token_b = pool_data.token_b.to_string();
-            let price = pool_data.price;
-            prices.insert(token_a, price);
-            prices.insert(token_b, 1.0 / price);
+            let pool_data: PoolData = bincode::deserialize(&pool.account.data)?;
+            
+            let market = Market {
+                address: pool.pubkey,
+                name: format!("{}/{}", pool_data.token_a.to_string(), pool_data.token_b.to_string()),
+                base_asset: pool_data.token_a,
+                quote_asset: pool_data.token_b,
+                base_decimals: pool_data.token_a_decimals,
+                quote_decimals: pool_data.token_b_decimals,
+            };
+            markets.push(market);
         }
         
-        prices
+        Ok(markets)
     }
 
-    async fn get_account_balances(&self, account: &Pubkey) -> HashMap<String, f64> {
+    async fn get_orderbook(&self, market: &Market) -> Result<(Vec<Order>, Vec<Order>)> {
+        Ok((Vec::new(), Vec::new()))
+    }
+
+    async fn place_order(
+        &self,
+        market: &Market,
+        order_type: OrderType,
+        side: OrderSide,
+        price: f64,
+        quantity: f64,
+    ) -> Result<Order> {
+        let pool_data = self.get_pool_data(&market.address).await?;
+        
+        let (token_a_amount, token_b_amount) = match side {
+            OrderSide::Bid => (quantity, quantity * price),
+            OrderSide::Ask => (quantity / price, quantity),
+        };
+        
+        let minimum_amount_out = match side {
+            OrderSide::Bid => token_b_amount * 0.99,
+            OrderSide::Ask => token_a_amount * 0.99,
+        };
+        
+        let instruction = orca_swap::instruction::swap(
+            &self.program_id,
+            &market.address,
+            &self.authority.pubkey(),
+            &pool_data.token_a_account,
+            &pool_data.token_b_account,
+            &self.get_token_account(&market.base_asset).await?,
+            &self.get_token_account(&market.quote_asset).await?,
+            token_a_amount,
+            minimum_amount_out,
+        )?;
+        
+        let recent_blockhash = self.rpc_client.get_latest_blockhash()?;
+        let transaction = Transaction::new_signed_with_payer(
+            &[instruction],
+            Some(&self.authority.pubkey()),
+            &[&self.authority],
+            recent_blockhash,
+        );
+        
+        self.rpc_client.send_and_confirm_transaction(&transaction)?;
+        
+        Ok(Order {
+            id: self.create_order_id(),
+            market: market.clone(),
+            order_type,
+            side,
+            price,
+            quantity,
+            status: OrderStatus::Filled,
+        })
+    }
+
+    async fn cancel_order(&self, _order: &Order) -> Result<()> {
+        Ok(())
+    }
+
+    async fn get_balances(&self, market: &Market) -> Result<HashMap<Pubkey, f64>> {
+        let pool_data = self.get_pool_data(&market.address).await?;
+        
+        let token_a_balance = self.rpc_client.get_token_account_balance(&pool_data.token_a_account)?;
+        let token_b_balance = self.rpc_client.get_token_account_balance(&pool_data.token_b_account)?;
+        
         let mut balances = HashMap::new();
-        let tokens = self.get_tokens().await;
+        balances.insert(market.base_asset, token_a_balance.amount as f64);
+        balances.insert(market.quote_asset, token_b_balance.amount as f64);
         
-        for token in tokens {
-            let balance = self.get_token_balance(account, &token).await;
-            balances.insert(token.to_string(), balance);
-        }
-        
-        balances
-    }
-    
-    async fn place_order(&self, pool: &str, side: &str, size: f64, price: f64) -> Option<String> {
-        let pool_pubkey = self.get_pool_pubkey(pool).await;
-        let order_id = self.swap(&pool_pubkey, side, size, price).await;
-        order_id
-    }
-    
-    async fn cancel_order(&self, _order_id: &str) -> bool {
-        false
+        Ok(balances)
     }
 }
 
 impl Orca {
-    async fn get_pools(&self) -> Vec<Pubkey> {
-        let pools = vec![];
-        pools
+    fn create_order_id(&self) -> u64 {
+        rand::random()
     }
-    
-    async fn get_pool_data(&self, pool: &Pubkey) -> orca::pool::PoolData {
-        let pool_data = orca::pool::PoolData {
-            token_a: Pubkey::default(),
-            token_b: Pubkey::default(),
-            price: 0.0,
-        };
-        pool_data
+
+    async fn get_pool_data(&self, pool_address: &Pubkey) -> Result<PoolData> {
+        let pool_account_info = self.rpc_client.get_account(pool_address)?;
+        let pool_data: PoolData = bincode::deserialize(&pool_account_info.data)?;
+        
+        Ok(pool_data)
     }
-    
-    async fn get_tokens(&self) -> Vec<Pubkey> {
-        let tokens = vec![];
-        tokens
-    }
-    
-    async fn get_token_balance(&self, account: &Pubkey, token: &Pubkey) -> f64 {
-        let balance = 0.0;
-        balance
-    }
-    
-    async fn get_pool_pubkey(&self, pool: &str) -> Pubkey {
-        let pool_pubkey = Pubkey::default();
-        pool_pubkey
-    }
-    
-    async fn swap(&self, pool: &Pubkey, side: &str, size: f64, price: f64) -> Option<String> {
-        let order_id = None;
-        order_id
+
+    async fn get_token_account(&self, token_mint: &Pubkey) -> Result<Pubkey> {
+        let token_account = spl_associated_token_account::get_associated_token_address(
+            &self.authority.pubkey(),
+            token_mint,
+        );
+        
+        Ok(token_account)
     }
 }
