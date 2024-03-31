@@ -7,10 +7,10 @@ use solana_mev_bot::dex::{raydium, serum, orca};
 use solana_mev_bot::strategies::{sniping_strategy, copy_trade_strategy};
 use solana_mev_bot::utils::solana;
 
-#[tokio::main]
-async fn main() {
-    let rpc_url = "https://api.mainnet-beta.solana.com";
-    let ws_url = "wss://api.mainnet-beta.solana.com";
+#[tokio::test]
+async fn test_solana_mev_bot() {
+    let rpc_url = "https://api.devnet.solana.com";
+    let ws_url = "wss://api.devnet.solana.com";
     let payer_keypair = solana::load_keypair("path/to/keypair.json");
     let target_accounts = HashMap::new();
     let profit_threshold = 0.01;
@@ -35,5 +35,6 @@ async fn main() {
         Arc::new(Mutex::new(copy_trade_strategy::CopyTradeStrategy::new(rpc_client.clone()))),
     );
 
-    solana_mev_bot.run().await;
+    let result = solana_mev_bot.run().await;
+    assert!(result.is_ok());
 }
