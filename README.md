@@ -1,115 +1,68 @@
-## Solana MEV Bot
-### This is an advanced MEV (Miner Extractable Value) bot specialized in sniping and copy trading strategies for the Solana network.
+# MEV Bot Solana
 
-### Table of Contents
-## General Description
-#### Key Features
-#### Project Structure
-#### Installation and Configuration
-#### Usage
-#### Running the Bot
-#### Available Strategies
-#### Sniping
-#### Copy Trading
-#### Development and Contribution
-#### System Requirements
-#### Code Structure
-#### Development Guide
-#### Adding New Strategies
-#### Integrating with New DEXs
-#### Improvements and Optimizations
-#### License
+Welcome to the MEV Bot Solana repository! This project aims to develop a bot that takes advantage of MEV (Miner Extractable Value) opportunities on the Solana blockchain. 
 
-## General Description
-This project is an advanced MEV bot designed to operate on the Solana network. The bot specializes in two main strategies:
+## Introduction
 
-Sniping: Detects and capitalizes on opportunities from new listings and liquidity additions on Solana DEXs.
-Copy Trading: Replicates the strategies of successful traders, leveraging their moves to generate profits.
-The bot uses simulation, optimization, and transaction execution techniques to maximize profits in a competitive market environment.
+MEV Bot Solana is a tool designed to monitor and execute transactions on the Solana network to gain profits through MEV strategies. The bot uses advanced techniques to detect and capitalize on arbitrage opportunities, liquidations, and other situations where value can be extracted.
 
-Key Features
-Implementation of advanced sniping and copy trading strategies
-Seamless integration with multiple Solana DEXs (Raydium, Serum, Orca, etc.)
-Transaction simulation and optimization to improve profitability
-Risk management and security, including transaction validation and exposure limits
-Real-time market condition analysis and dynamic strategy adaptation
-Monitoring and logging of bot activity, with alert generation
-Distributed and fault-tolerant architecture for increased scalability and availability
-Project Structure
-The project is divided into the following main modules:
+## Requirements
 
-solana_mev_bot.rs: The main component that coordinates the bot's operation.
-dex/: Modules for integrating with different Solana DEXs.
-strategies/: Implementation of the sniping and copy trading strategies.
-models.rs: Definition of the data structures used by the bot.
-utils/: Utility functions for interacting with the Solana network.
-monitoring/: Components responsible for logging and monitoring the bot's activity.
-main.rs: The entry point of the program.
-Installation and Configuration
-Clone the repository:
+Before getting started, make sure you have the following installed:
 
-Copy code
-git clone https://github.com/Nicolopez603/mev-bot-solana.git
-Make sure you have Rust installed on your system.
-Navigate to the project directory and run:
+- Node.js (version 12 or higher)
+- npm (Node.js package manager)
+- Solana account with sufficient funds for transactions
 
-Copy code
-cargo build --release
-Copy the config.toml.example file to config.toml and adjust the configuration according to your needs (RPC node URL, target accounts, etc.).
-Usage
-Running the Bot
-To run the bot, use the following command:
+## Installation
 
+Follow these steps to install and set up the MEV Bot Solana:
 
-Copy code
-cargo run --release
-The bot will run continuously, searching for and executing MEV opportunities on the Solana network.
+1. Clone this repository to your local machine: `git clone https://github.com/Nicolopez603/mev-bot-solana.git`
 
-Available Strategies
-Sniping
-The sniping strategy is responsible for rapidly detecting and capitalizing on opportunities that arise on Solana DEXs, such as new listings and liquidity additions. The bot optimizes the execution of these transactions to maximize profits.
+2. Navigate to the project directory: `cd mev-bot-solana`
 
-Copy Trading
-The copy trading strategy allows the bot to replicate the trades of successful traders on Solana. The bot tracks the activities of selected traders and executes transactions to follow their moves.
+3. Install the project dependencies: `npm install`
 
-Development and Contribution
-System Requirements
-Rust (latest stable version)
-Solana CLI (latest version)
-Code Structure
-Refer to the Project Structure section for the organization of the codebase.
+4. Configure the environment variables:
+  - Create a `.env` file in the project root.
+  - Add the following variables and provide your own values:
 
-Development Guide
+    ```
+    PRIVATE_KEY=<your_solana_private_key>
+    RPC_URL=<URL_of_Solana_RPC_node>
+    ```
 
-Adding New Strategies
+## Usage
 
-Create a new module in the strategies/ folder to implement the strategy.
+Once you have completed the installation and configuration, you can run the MEV Bot Solana by following these steps:
 
-Define a new struct that implements the Strategy trait.
+1. Start the bot: `npm start`
 
-Implement the update() and find_opportunities() methods for the new strategy.
+2. The bot will begin monitoring the Solana network for MEV opportunities.
+3. When an opportunity is detected, the bot will automatically execute the necessary transactions to capitalize on it.
+4. You can monitor the bot's activity and the profits earned in the console or in the generated logs.
 
-Integrate the new strategy into the StrategyManager.
+## Examples
 
-Integrating with New DEXs
+Here are some examples of MEV strategies that the bot can exploit:
 
-Create a new module in the dex/ folder for the integration with the new DEX.
+- Arbitrage between different Solana exchanges.
+- Liquidation of undercollateralized positions in lending protocols.
+- Taking advantage of price discrepancies in trading pairs.
 
-Implement the DexIntegration trait for the new DEX.
+For more details on the implemented strategies, refer to the source code in the `src/strategies` directory.
 
-Add methods to fetch prices, account balances, place and cancel orders.
+## Contribution
 
-Integrate the new DEX into the SolanaMevBot and the StrategyManager.
+If you would like to contribute to this project, you are welcome to do so! You can follow these steps:
 
-Improvements and Optimizations
+1. Fork this repository.
+2. Create a new branch with a descriptive name: `git checkout -b feature/new-strategy`
+3. Make your modifications and improvements on the new branch.
+4. Ensure that the code follows the style conventions and passes the existing tests.
+5. Submit a pull request describing your changes and why they should be incorporated.
 
-Identify areas of the code that can be optimized in terms of performance, scalability, or security.
+## License
 
-Implement advanced optimization techniques, such as parallelism, efficient data structures, etc.
-
-Enhance error handling and implement a robust logging system.
-
-Add more unit and integration tests to ensure the bot's robustness.
-
-License
-This project is distributed under the MIT License.
+This project is distributed under the MIT License. See the `LICENSE` file for more information.
